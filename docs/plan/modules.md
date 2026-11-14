@@ -14,7 +14,7 @@ change, so raise it before doing it.
 | NET | `daemon.net` | Socket server, auth handshake, client sessions, fan-out of events | PROTO, CONFIG, LOG | 1 |
 | GIT | `daemon.git` | Running git: worktrees, branches, diff, merge, cleanup | PROTO | 1 |
 | AGENT | `daemon.agent` | Adapter interface, process runner, one adapter class per CLI | PROTO, CONFIG | 1 |
-| MCP | `daemon.mcp` | Stdio MCP server exposing `ask_user`; relays to the daemon socket | PROTO, CONFIG | 3 |
+| MCP | `daemon.mcp` | Stdio MCP server exposing `ask_user` and the peer-mode tools; relays to the daemon socket | PROTO, CONFIG | 3 |
 | ORCH | `daemon.orchestrator` | Goals, plan, task state machine, scheduler, budget enforcement | all daemon modules | 3 |
 | LIFE | `daemon.lifecycle` | `DaemonMain` wiring, single-instance lock, idle exit, crash recovery | all daemon modules | 1 |
 
@@ -46,6 +46,21 @@ change, so raise it before doing it.
 5. Client modules never import BRIDGE; they see the world only through PACKET.
 6. Every player-initiated action passes through ACCESS before reaching BRIDGE.
 
+## Team modes
+
+A project setting, overridable per goal. All modes share worktrees, the task state machine,
+the wall and review; they differ only in who creates tasks and who talks to whom.
+
+| Mode | Who plans | Who codes | Agent-to-agent talk | Use it for |
+|---|---|---|---|---|
+| `auto` (default) | The first agent decides: do it alone, or write a plan | That agent, or workers if it planned | No | Everything, until you know better |
+| `solo` | Nobody | One agent | No | Small changes, lowest cost |
+| `lead` | A lead agent, with your approval | Workers in parallel (the lead too, if allowed) | Through the lead's plan only | Larger goals that split cleanly |
+| `peer` | The agents, by adding and claiming tasks | Every agent | Yes, direct messages | Exploratory work; experimental, costs the most |
+
+Defaults: `auto`, at most 3 agents in parallel, plan approval asked only when a plan has
+more than one task, the lead may also code.
+
 ## Wire protocol (mod server to daemon)
 
 One JSON object per line, UTF-8. Every object has `"t"` (type).
@@ -76,6 +91,8 @@ and gets a paged `reply`.
 | `agent.edit` | path, added, removed | AGENT |
 | `agent.command` | command, exitCode? | AGENT |
 | `agent.message` | text (truncated; full text by request) | AGENT |
+| `agent.peer_message` | from, to, text (peer mode) | MCP |
+| `goal.mode` | mode chosen, and for `auto` which path it took | ORCH |
 | `agent.question` | questionId, text, options? | MCP |
 | `question.answered` | questionId, answer, actor | ORCH |
 | `task.ready_for_review` | filesChanged, added, removed | ORCH |

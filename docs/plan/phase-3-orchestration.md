@@ -10,6 +10,8 @@ questions that walk over to the player.
    task moving through its columns.
 3. An agent calling `ask_user` makes its NPC walk to the player; the answer unblocks it.
 4. A daily budget cap stops new agent runs when reached and says so.
+5. The same goal can be run in `solo`, `lead` and `peer` mode by changing one setting, and
+   `auto` picks solo for a one-file change and a plan for a multi-part one.
 
 ## ORCH: goals, plan, scheduler
 
@@ -41,6 +43,35 @@ questions that walk over to the player.
 - [ ] `P3-ORCH-12` Tests: transition table; plan validation cases; scheduler with a fake
       adapter (dependencies respected, parallel limit respected, budget stop).
 
+## ORCH: team modes
+
+How a goal is worked is a setting, per project, changeable per goal. See "Team modes" in
+[modules.md](modules.md) for the definitions. The scheduler, state machine, worktrees and
+review flow are shared; a mode only decides who creates tasks and who talks to whom.
+
+- [ ] `P3-ORCH-13` `TeamMode` setting: `auto` (default), `solo`, `lead`, `peer`. Stored in
+      project config; `goal.create` may override it for one goal.
+- [ ] `P3-ORCH-14` `solo`: no planning step. The goal becomes one task for one agent in one
+      worktree. This is the phase 1 path kept as a first-class mode.
+- [ ] `P3-ORCH-15` `lead`: the flow in the section above (lead plans, workers execute).
+      Option `leadAlsoCodes` lets the lead take a task itself once planning is done.
+- [ ] `P3-ORCH-16` `peer`: no lead. Every agent starts with the goal and the shared task
+      list (empty at first) and coordinates through the peer tools (see MCP below). A task
+      exists once an agent adds it; an agent works only on tasks it has claimed. The goal is
+      finished when no task is open and every agent has reported it has nothing to add.
+- [ ] `P3-ORCH-17` `auto`: one agent starts and triages. It answers with either "I will do
+      this myself" (continue as `solo` in the same session, so nothing is re-read) or a plan
+      (continue as `lead`). The triage instruction: split only when the parts are
+      independent enough to merge separately.
+- [ ] `P3-ORCH-18` Defaults, in one place: mode `auto`, `maxParallelAgents` 3, plan approval
+      required when a plan has more than one task and skipped for a single task,
+      `leadAlsoCodes` on, dependants wait for `merged`.
+- [ ] `P3-ORCH-19` Peer safety limits: a cap on messages per agent per goal and on total
+      tasks, and a no-progress detector (messages exchanged, no commits for a set time) that
+      pauses the goal and asks the player.
+- [ ] `P3-ORCH-20` Tests with a fake adapter: each mode reaches `review` on a scripted goal;
+      `auto` takes the solo path and the lead path; a peer loop trips the limit.
+
 ## MCP: ask_user
 
 - [ ] `P3-MCP-1` **verify** how each supported CLI registers a stdio MCP server per run
@@ -57,6 +88,13 @@ questions that walk over to the player.
       CLI does not kill a long tool call, otherwise end the run and resume the session with
       the answer.
 - [ ] `P3-MCP-6` Test: drive `AskUserServer` over pipes with a scripted client.
+- [ ] `P3-MCP-7` Peer tools, offered only in `peer` mode: `list_tasks`, `add_task(title,
+      brief)`, `claim_task(id)`, `message_agent(agent, text)`, `read_messages`.
+- [ ] `P3-MCP-8` `claim_task` is atomic in ORCH: two agents claiming the same task get one
+      winner and one refusal.
+- [ ] `P3-MCP-9` Message delivery: a message to a running agent is returned by its next
+      `read_messages` call; a message to an idle agent resumes its session with the text.
+      Each message is logged as `agent.peer_message`.
 
 ## AGENT: additions
 
@@ -92,6 +130,8 @@ questions that walk over to the player.
       stop two blocks away, play a sound, face them. If the player is far or in another
       dimension, wait at the studio and send a chat notice instead.
 - [ ] `P3-NPC-3` Return to the desk when answered.
+- [ ] `P3-NPC-4` Mode-specific staging: `solo` shows one NPC and no lead; `peer` has no
+      lead spot, and an agent messaging another walks to that agent's desk and back.
 
 ## PACKET, CSTATE, SCREEN
 
@@ -109,9 +149,20 @@ questions that walk over to the player.
 
 - [ ] `P3-CMD-1` `/vibe goal <text>`, `/vibe plan approve|reject`, `/vibe answer <text>`,
       `/vibe agents`, `/vibe budget [amount]`.
+- [ ] `P3-CMD-2` `/vibe mode [auto|solo|lead|peer]` shows or sets the project's team mode;
+      `/vibe goal --mode <mode> <text>` overrides it once.
+- [ ] `P3-SCREEN-5` Team mode section in the board screen: mode picker with a one-line
+      description of each, parallel-agent limit, plan approval and `leadAlsoCodes` toggles.
+      The wall header shows the mode a goal is running in.
 
 ## Things to consider
 
+- Why `auto` is the default: most goals are small, and a lead plus workers on a small goal
+  costs several times the tokens of one agent for the same result. Check this with real
+  runs before release and change the default if the numbers disagree.
+- `peer` is the most expensive and least predictable mode: agents can talk in circles.
+  Label it as experimental in the UI and keep its limits on by default.
+- Mode changes apply to the next goal, never to one that is running.
 - Dependent tasks: waiting for `merged` is safe but slow because the player gates each
   step. Starting from a dependency's `review` branch is faster but means a rejected
   dependency invalidates its dependants. Default to waiting; make the other a setting.

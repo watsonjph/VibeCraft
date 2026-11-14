@@ -55,7 +55,7 @@ interact; that is off by default and behind a warning (phase 7).
 | 0 | Init | Building Fabric scaffold (done) | |
 | 1 | [The pipe](phase-1-pipe.md) | One agent in a worktree, events in chat, replay after restart | 0 |
 | 2 | [The studio](phase-2-studio.md) | NPC, desk, live monitor in the world | 1 |
-| 3 | [Orchestration](phase-3-orchestration.md) | Lead agent, task wall, parallel workers, questions | 2 |
+| 3 | [Orchestration](phase-3-orchestration.md) | Team modes (auto, solo, lead, peer), task wall, parallel workers, questions | 2 |
 | 4 | [Review and merge](phase-4-review-merge.md) | Diff screen, Merge / Request changes / Discard | 3 |
 | 5 | [Models and identity](phase-5-models-identity.md) | Codex and opencode adapters, agent customisation | 1 (adapters), 3 (UI) |
 | 6 | [Lifecycle](phase-6-lifecycle.md) | Catch-up summary, crash recovery, many projects | 4 |
