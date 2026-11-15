@@ -80,15 +80,18 @@ events back in chat, and replay after a restart. No entities or screens yet.
 
 ## AGENT: runner and Claude Code adapter
 
-- [ ] `P1-AGENT-1` **verify** how to hold a live, two-way session with the installed Claude
-      Code CLI, not only a one-shot run. Needed: send a follow-up message while it works,
-      interrupt it, receive its permission requests as data, resume after exit, set the
-      working directory, deny `git push`. Compare the CLI's own streaming input mode with
-      the Agent Client Protocol (one protocol several CLIs speak, which could make this a
-      single adapter). Pick one, record the CLI version and exact command in the adapter's
-      class comment, and note what the other CLIs support for phase 5.
-- [ ] `P1-AGENT-2` Capture a real run's raw output into `src/test/resources/fixtures/` (a
-      read, an edit, a shell command, a final message, usage numbers).
+- [ ] `P1-AGENT-1` Hold a live, two-way session with the Claude Code CLI. Verified on
+      2.1.325 with the CLI's own streaming input mode (commands and findings in
+      `src/test/resources/fixtures/claude-code/README.md`): follow-up messages in one
+      process, permission requests as data with an allow answer, interrupt, working
+      directory, `git push` denied, usage and subscription limit reporting. Still to
+      **verify** before this is ticked: denying a permission request, resume after exit,
+      a message sent mid-turn without interrupting, and whether the Agent Client Protocol
+      is worth using instead so one adapter covers several CLIs.
+- [x] `P1-AGENT-2` Real output recorded in `src/test/resources/fixtures/claude-code/`:
+      `oneshot.jsonl` (a read, an edit, a shell command, a final message, usage numbers)
+      and `session.jsonl` (three turns, a permission request, an interrupt). `record.py`
+      re-records both and scrubs personal data.
 - [ ] `P1-AGENT-3` `AgentAdapter` interface, session-shaped: `start(spec)` returns a
       session with `send(text)`, `interrupt()`, `answerPermission(id, decision)` and
       `close()`; output arrives as events. An adapter that cannot do one of these says so
