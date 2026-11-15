@@ -99,7 +99,8 @@ The behaviour is specified under "Budgets and cost warnings" in [modules.md](mod
       a chosen amount), let this run finish, stop. Owner-only.
 - [ ] `P3-BUDGET-9` Subscription signals: when a CLI reports its plan's rate-limit state or
       a "limit reached, resets at" message, surface it as a warning or reached event with
-      the reset time (**verify** what each CLI exposes). Agents wait for the reset instead
+      the reset time. Claude Code does this through `rate_limit_event` lines (recorded in
+      the fixtures); **verify** what the other CLIs expose. Agents wait for the reset instead
       of retrying.
 - [ ] `P3-BUDGET-10` Period reset at local midnight, week start and month start; paused
       agents resume if their limit's action was `pause`.
