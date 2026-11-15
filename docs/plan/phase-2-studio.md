@@ -11,17 +11,20 @@ monitor that tails the real stream. First client screen and first custom packets
    it a message.
 4. Removing the mod and loading the world shows no broken entities or blocks.
 
-## SPIKE: decide the entity approach first
+## SPIKE: prove the pieces first
 
-- [ ] `P2-SPIKE-1` **verify** the vanilla Mannequin entity: spawn server-side, set skin by
-      Mojang username, custom name tag, move it each tick and check the walk animation on a
-      client, seat it by riding an invisible entity, make it look at a position.
-- [ ] `P2-SPIKE-2` **verify** Text Display (multi-line text, background, line width, update
+Decided: the agent is a custom mob, not the vanilla Mannequin, because agents must walk
+across real terrain and (in play mode) act in the world.
+
+- [ ] `P2-SPIKE-1` **verify** a custom mob built on the vanilla path-finding mob base:
+      registers on a dedicated server, navigates to a position around obstacles, can be
+      seated on an invisible seat, is not saved with the world.
+- [ ] `P2-SPIKE-2` **verify** the client renderer: the vanilla player model and animations
+      on that mob, a skin from a Mojang username, a name tag, a held item.
+- [ ] `P2-SPIKE-3` **verify** Text Display (multi-line text, background, line width, update
       rate without flicker) and Interaction entities (left and right click reach the server
       with the clicking player).
-- [ ] `P2-SPIKE-3` Write the result into this file. If Mannequin fails any must-have (walk,
-      sit, skin), switch NPC to a custom mob using the player renderer and add the client
-      renderer tasks here.
+- [ ] `P2-SPIKE-4` Write what was learned into this file before building on it.
 
 ## STUDIO: anchor, layout, persistence
 
@@ -46,11 +49,11 @@ monitor that tails the real stream. First client screen and first custom packets
 
 ## NPC: agent entities
 
-- [ ] `P2-NPC-1` `AgentNpc`: wraps the entity for one agent; holds its desk, current target
+- [ ] `P2-NPC-1` `AgentMob`: the custom entity type, registered in `src/main`, with no
+      vanilla AI goals of its own. `AgentNpc` wraps one per agent and holds its desk, target
       and state (`idle`, `walking`, `seated`, `approaching_player`).
-- [ ] `P2-NPC-2` Movement: straight-line walk at a fixed speed between layout points, facing
-      the direction of travel. Teleport if the target is beyond a distance or the path is
-      blocked for more than a few seconds.
+- [ ] `P2-NPC-2` Movement uses vanilla navigation to layout points and players. If no path
+      is found or progress stalls for a few seconds, teleport and log why.
 - [ ] `P2-NPC-3` Behaviour table from agent status: `working` statuses mean seated at the
       desk, `idle` means standing at the gathering point, `done` means stand up and face the
       wall.
@@ -59,6 +62,23 @@ monitor that tails the real stream. First client screen and first custom packets
 - [ ] `P2-NPC-5` NPCs are invulnerable, not pushable, do not drop items, do not count for
       mob caps, and ignore other mods' AI goals as far as possible.
 - [ ] `P2-NPC-6` Right-click opens the message screen for that agent (through PACKET).
+- [ ] `P2-NPC-7` Instant acknowledgement: in the tick a player addresses an agent it turns
+      to face them and shows a thinking indicator. This is local behaviour and must never
+      wait for the model.
+- [ ] `P2-NPC-8` Talking without a screen: say the agent's name in chat within earshot
+      ("Rook, how is it going?") and the rest of the line goes to that agent. Replies appear
+      in chat and in a speech bubble.
+- [ ] `P2-NPC-9` Idle life without model calls: glance at passing players, shift posture,
+      look at the wall when a card changes. Costs no tokens.
+
+## RENDER: client
+
+- [ ] `P2-RENDER-1` Renderer for `AgentMob` using the player model: walk, sit and
+      head-turn animations, name tag, skin lookup by username with a default skin while
+      loading or offline.
+- [ ] `P2-RENDER-2` Speech bubble above the head, filled from `stream` text as it arrives
+      and fading after the reply ends.
+- [ ] `P2-RENDER-3` Status marker above the head: thinking, working, needs you.
 
 ## DISPLAY: monitors
 
@@ -94,8 +114,9 @@ monitor that tails the real stream. First client screen and first custom packets
 
 - [ ] `P2-BRIDGE-1` `StudioMirror`: in-memory model of goals, tasks and agents built from
       events on the server thread. NPC and DISPLAY read from it; they do not parse events.
-- [ ] `P2-BRIDGE-2` Daemon command `agent.message` to send follow-up text to a running or
-      resumable session (**verify** how each CLI accepts follow-up input headlessly).
+- [ ] `P2-BRIDGE-2` Daemon command `agent.message` with a delivery choice: `next` (default:
+      the agent sees it at its next step and keeps working) or `interrupt` (stop what it is
+      doing and read this now). Uses the session from `P1-AGENT-3`.
 
 ## Things to consider
 
@@ -105,8 +126,8 @@ monitor that tails the real stream. First client screen and first custom packets
   an accidental client import early.
 - Text Displays are visible through walls at some settings and have a view range; set both
   deliberately.
-- Vanilla clients (phase 7 friends without the mod) will see entities but cannot open
-  screens. Keep everything essential readable in-world.
+- A custom entity type means every client joining a server with the mod needs the mod
+  too. That is accepted; say it in the README.
 - Players will build around and inside the studio. Blocked desks should degrade to a
   teleport, not a stuck NPC.
 - Name tags and monitor text come from agent output. Strip formatting codes and control

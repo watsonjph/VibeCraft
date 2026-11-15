@@ -12,6 +12,8 @@ interact; that is off by default and behind a warning (phase 7).
 
 ## How to use this plan
 
+- [world-tools.md](world-tools.md) is the catalogue of what agents can do in the world in
+  play mode.
 - [modules.md](modules.md) is the map: every code module, what it owns, what it may depend
   on, plus the wire protocol, event catalogue and on-disk layout. Read it first.
 - Each phase file splits its work by module. Task ids look like `P1-LOG-2` (phase 1, module
@@ -48,6 +50,23 @@ interact; that is off by default and behind a warning (phase 7).
 - **Questions.** A small stdio MCP server offering `ask_user`, registered with each CLI, so
   "agent needs you" works the same across adapters.
 
+## What every phase is held to
+
+Agents must be interactive, fast and compliant. These are checked, not hoped for.
+
+| Goal | Target | Where it is built |
+|---|---|---|
+| Interactive | An NPC visibly reacts in the same tick it is spoken to, before any model replies | `P2-NPC-7` |
+| Interactive | A message reaches a working agent at its next step, or at once with interrupt | `P1-AGENT-3`, `P2-BRIDGE-2` |
+| Interactive | Stop-all ends every agent process within 2 seconds | `P3-CMD-3` |
+| Fast | Agent output appears in game within 250 ms of the CLI printing it | `P1-NET-7` |
+| Fast | Eight streaming agents cost under 1 ms of server tick time on average | `P2-DISPLAY-2`, `P8-QA-3` |
+| Fast | No model call where code can decide; nothing re-read that was already summarised | `P3-ORCH-22`, `P3-ORCH-23` |
+| Compliant | Limits are enforced by code and CLI permissions, never by prompt wording alone | `P3-ORCH-21`, `P9-WORLD-19` to `24` |
+| Compliant | No task reaches Review without passing the gate (scope, repo untouched, checks run) | `P3-ORCH-24`, `P3-ORCH-25` |
+| Compliant | Spending never passes a limit the user set by more than one agent step, and the user is warned before it gets there | `P3-BUDGET-6`, `P3-BUDGET-7` |
+| Compliant | Only each provider's official command-line interface, under the user's own login | `P1-AGENT-1`, `P8-DOCS-8` |
+
 ## Phases
 
 | # | Phase | Delivers | Needs |
@@ -55,14 +74,16 @@ interact; that is off by default and behind a warning (phase 7).
 | 0 | Init | Building Fabric scaffold (done) | |
 | 1 | [The pipe](phase-1-pipe.md) | One agent in a worktree, events in chat, replay after restart | 0 |
 | 2 | [The studio](phase-2-studio.md) | NPC, desk, live monitor in the world | 1 |
-| 3 | [Orchestration](phase-3-orchestration.md) | Team modes (auto, solo, lead, peer), task wall, parallel workers, questions | 2 |
+| 3 | [Orchestration](phase-3-orchestration.md) | Team modes (auto, solo, lead, peer), task wall, parallel workers, questions, budgets and cost warnings | 2 |
 | 4 | [Review and merge](phase-4-review-merge.md) | Diff screen, Merge / Request changes / Discard | 3 |
 | 5 | [Models and identity](phase-5-models-identity.md) | Codex and opencode adapters, agent customisation | 1 (adapters), 3 (UI) |
 | 6 | [Lifecycle](phase-6-lifecycle.md) | Catch-up summary, crash recovery, many projects | 4 |
 | 7 | [Friends on a server](phase-7-multiplayer.md) | Shared access with warning, allowlist, budgets | 4 |
 | 8 | [Release](phase-8-release.md) | README, CI, Modrinth | 4, ideally 5 to 7 |
+| 9 | [Play mode](phase-9-play-mode.md) | Agents that play vanilla Minecraft through the [world tools](world-tools.md): gather, craft, build from schematics, farm, defend, brainstorm. Built in seven stages | 3 |
 
 Phases 5, 6 and 7 are independent of each other and can be done in any order after 4.
+Phase 9 is numbered last but only needs phase 3, so it can be built before review and merge.
 
 ## Not planned
 
@@ -75,8 +96,9 @@ Phases 5, 6 and 7 are independent of each other and can be done in any order aft
 
 1. **CLI formats.** Headless flags and stream formats of all three CLIs are unverified here
    and change between releases. Every adapter starts from a recorded sample of real output.
-2. **Mannequin limits.** If the vanilla Mannequin cannot walk or sit convincingly, phase 2
-   needs a custom entity and renderer.
+2. **Custom agent entity.** Agents are a custom mob with a client renderer, so they can
+   path-find and act. That code is the most exposed to Minecraft version changes, and it
+   means every client on a server needs the mod.
 3. **Provider terms.** Driving a subscription CLI headlessly on your own machine is the
    supported path; sharing it with friends may not be.
 4. **Minecraft updates.** Entity and screen code breaks across versions. Keeping the daemon

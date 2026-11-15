@@ -47,8 +47,9 @@ while sharing is on, and to the owner each time an allowed player joins:
 
 ## ORCH, CONFIG: budgets and attribution
 
-- [ ] `P7-CONFIG-1` Budgets: total per day and per guest per day, in tokens and optionally
-      money. Sharing cannot be turned on without a guest budget set.
+- [ ] `P7-CONFIG-1` Guest limits: the `guest` scope of the phase 3 budget model
+      (`P3-BUDGET-4`), per guest per day. Sharing cannot be turned on without one. Guests
+      see their own meter; warnings about a guest's limit go to the guest and the owner.
 - [ ] `P7-ORCH-1` Usage is attributed to the actor who caused the run (goal creator, or the
       player whose message resumed an agent).
 - [ ] `P7-ORCH-2` Enforce the guest budget before each spawn and each resumed message.
@@ -63,8 +64,8 @@ while sharing is on, and to the owner each time an allowed player joins:
 - [ ] `P7-PACKET-2` In-world text is visible to everyone who can see the entities. Add a
       setting for what monitors and cards show when sharing is `off` or a viewer has no
       access: full, titles only, or blank. Default on a dedicated server: titles only.
-- [ ] `P7-PACKET-3` Clients without the mod: the server must not send custom payloads to
-      them and must not require the mod to join.
+- [ ] `P7-PACKET-3` Clients need the mod to join, because the agent is a custom entity
+      type. Make the refusal message for a client without it say what to install.
 - [ ] `P7-PACKET-4` Re-check access on every serverbound payload, not only when a screen
       opens; revoking takes effect immediately.
 
@@ -81,8 +82,8 @@ while sharing is on, and to the owner each time an allowed player joins:
       game is disabled on dedicated servers.
 - [ ] `P7-SERVER-2` Document that the CLIs must be installed and logged in for the account
       that runs the server process.
-- [ ] `P7-SERVER-3` Run the full flow with `./gradlew runServer` and two clients, one
-      without the mod.
+- [ ] `P7-SERVER-3` Run the full flow with `./gradlew runServer` and two clients with
+      different access levels.
 
 ## Things to consider
 

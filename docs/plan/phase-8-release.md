@@ -23,6 +23,9 @@ Make it installable and understandable by someone who has never seen the repo.
 - [ ] `P8-DOCS-6` Command and settings reference generated from, or checked against, the
       code.
 - [ ] `P8-DOCS-7` CONTRIBUTING pointing at `AGENTS.md` and `docs/plan/`.
+- [ ] `P8-DOCS-8` Before publishing, re-read each provider's current terms for running
+      their CLI from another program on a subscription, and for shared use. Record the date
+      checked. If a provider does not allow it, that adapter ships as API-key only.
 
 ## BUILD
 

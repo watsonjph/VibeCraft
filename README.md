@@ -20,6 +20,13 @@ diff and press Merge.
 - **Bring your own models.** Agents run through the coding CLIs you already use, with your
   own subscription or API key.
 - **Agents are characters.** Give each one a name, a skin, a personality and a model.
+- **You set the spending.** Limit what all agents, one project or a single agent may use
+  per day, week or month, in money or tokens. You are warned as a limit gets close, and
+  agents pause and ask when it is reached.
+- **They can play, too.** Agents can gather and mine, craft, build from shapes or from
+  schematic files (including Litematica's), run crop and animal farms, guard you at night
+  and talk ideas through. Play mode is designed for cheap and local models, and a playing
+  agent has no access to your code.
 
 ## How a goal gets worked
 

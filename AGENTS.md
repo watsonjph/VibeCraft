@@ -52,8 +52,12 @@ docs/plan/                                            architecture, module map, 
 
 - Smallest thing that works. Prefer the JDK, then what Minecraft already ships (Gson, Netty,
   SLF4J), before adding a dependency. Ask before adding one.
-- Prefer vanilla entities (Mannequin, Text Display, Interaction) to custom blocks, entities
-  and renderers.
+- The agent is a custom mob with a client renderer. Everything else in the studio uses
+  vanilla entities (Text Display, Interaction) in preference to custom blocks and
+  renderers.
+- Agents must be interactive, fast and compliant: react locally before any model replies,
+  keep model calls off every path code can handle, and enforce limits in code, not in
+  prompts. Targets are in `docs/plan/README.md`.
 - No mixins unless there is no Fabric API event for the job.
 - Every agent CLI adapter has a test that parses a recorded output sample from the real CLI.
   Do not guess a CLI's flags or output format: run it and check.
