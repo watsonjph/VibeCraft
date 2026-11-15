@@ -62,6 +62,9 @@ events back in chat, and replay after a restart. No entities or screens yet.
       session (it will reconnect and replay), never block the agents.
 - [ ] `P1-NET-6` Tests with a real socket: bad token rejected; replay then live with a
       concurrent appender yields a gapless sequence.
+- [ ] `P1-NET-7` Latency check with `FakeAdapter`: time from a line leaving the agent
+      process to the event arriving at the mod. Target under 250 ms including the hand-off
+      to the server tick. Flush the log per event but do not force a disk sync per event.
 
 ## GIT: worktrees
 
@@ -77,14 +80,20 @@ events back in chat, and replay after a restart. No entities or screens yet.
 
 ## AGENT: runner and Claude Code adapter
 
-- [ ] `P1-AGENT-1` **verify** the installed Claude Code CLI's headless invocation: prompt
-      flag, streaming JSON output flag, how to set the working directory, permission mode
-      for unattended edits, how to deny `git push`, how to resume a session. Record the CLI
-      version and the exact command in the adapter's class comment.
+- [ ] `P1-AGENT-1` **verify** how to hold a live, two-way session with the installed Claude
+      Code CLI, not only a one-shot run. Needed: send a follow-up message while it works,
+      interrupt it, receive its permission requests as data, resume after exit, set the
+      working directory, deny `git push`. Compare the CLI's own streaming input mode with
+      the Agent Client Protocol (one protocol several CLIs speak, which could make this a
+      single adapter). Pick one, record the CLI version and exact command in the adapter's
+      class comment, and note what the other CLIs support for phase 5.
 - [ ] `P1-AGENT-2` Capture a real run's raw output into `src/test/resources/fixtures/` (a
       read, an edit, a shell command, a final message, usage numbers).
-- [ ] `P1-AGENT-3` `AgentAdapter` interface: `command(spec)` builds the process arguments;
-      `parse(line)` turns one output line into zero or more events. Nothing else.
+- [ ] `P1-AGENT-3` `AgentAdapter` interface, session-shaped: `start(spec)` returns a
+      session with `send(text)`, `interrupt()`, `answerPermission(id, decision)` and
+      `close()`; output arrives as events. An adapter that cannot do one of these says so
+      through a capability flag, and callers degrade (for example: queue the message and
+      deliver it by resuming after the run ends).
 - [ ] `P1-AGENT-4` `AgentProcess`: spawns in the worktree, reads stdout line by line on its
       own thread, feeds the adapter, appends events, captures stderr to the daemon log,
       emits `agent.status done` or `error` with the exit code.
@@ -96,6 +105,11 @@ events back in chat, and replay after a restart. No entities or screens yet.
       player can act on.
 - [ ] `P1-AGENT-8` Tests: adapter against the fixture produces the expected event list;
       a fake "CLI" script proves cancel leaves no child process.
+- [ ] `P1-AGENT-9` `FakeAdapter`: a scripted agent that replays a fixture with realistic
+      timing and makes real commits in its worktree. Selectable in config. Tests, demos and
+      the verification skill use it, so driving the full pipe costs no tokens.
+- [ ] `P1-AGENT-10` Partial reply text is forwarded as `stream` messages, coalesced to
+      about ten per second, and never written to the event log.
 
 ## LIFE: daemon main
 
@@ -105,8 +119,8 @@ events back in chat, and replay after a restart. No entities or screens yet.
       goal, worktree and agent), `run.stop`, `status`.
 - [ ] `P1-LIFE-3` Log to `logs/daemon.log`; uncaught exceptions are logged, and the daemon
       keeps running unless NET itself is dead.
-- [ ] `P1-LIFE-4` Clean shutdown on SIGTERM leaves agents running only if detached is
-      intended; decide and document (default: daemon exit stops its agents).
+- [ ] `P1-LIFE-4` Shutdown: when the daemon exits it stops its agents and marks their tasks
+      interrupted. Agents never outlive the daemon.
 
 ## BRIDGE: mod side
 

@@ -9,7 +9,8 @@ questions that walk over to the player.
 2. After approval, several workers run at once in separate worktrees and the wall shows each
    task moving through its columns.
 3. An agent calling `ask_user` makes its NPC walk to the player; the answer unblocks it.
-4. A daily budget cap stops new agent runs when reached and says so.
+4. With a limit set, the player is warned at 80%, and at 100% the affected agents pause
+   mid-run and one asks what to do. A per-agent limit stops only that agent.
 5. The same goal can be run in `solo`, `lead` and `peer` mode by changing one setting, and
    `auto` picks solo for a one-file change and a plan for a multi-part one.
 
@@ -36,8 +37,8 @@ questions that walk over to the player.
       to `review` with diff stats; with no commits, `failed` with the last message.
 - [ ] `P3-ORCH-9` Task commands: `task.cancel`, `task.retry`, `task.pause` (stop and keep
       the worktree), `task.reassign`, `task.message`.
-- [ ] `P3-ORCH-10` Budget: sum `usage` per day; before every spawn check the cap; on breach
-      emit `error` and set waiting tasks to `planned` with reason `budget`.
+- [ ] `P3-ORCH-10` Budget hooks: ORCH asks BUDGET before every spawn and resume, and acts on
+      its decisions (pause, ask, stop). The rules live in BUDGET (section below).
 - [ ] `P3-ORCH-11` Rate-limit and auth failures from a CLI set the agent `blocked` with the
       reason and retry on a backoff with a ceiling, not in a tight loop.
 - [ ] `P3-ORCH-12` Tests: transition table; plan validation cases; scheduler with a fake
@@ -72,10 +73,97 @@ review flow are shared; a mode only decides who creates tasks and who talks to w
 - [ ] `P3-ORCH-20` Tests with a fake adapter: each mode reaches `review` on a scripted goal;
       `auto` takes the solo path and the lead path; a peer loop trips the limit.
 
+## BUDGET: limits and cost warnings
+
+The behaviour is specified under "Budgets and cost warnings" in [modules.md](modules.md).
+
+- [ ] `P3-BUDGET-1` Usage ledger: every `usage` event appended to `usage/<yyyy-mm>.jsonl`
+      with agent, project, goal, actor, billing type, tokens, cost and whether the cost is
+      an estimate. Totals rebuilt from the ledger on start.
+- [ ] `P3-BUDGET-2` Billing type per agent preset (`api`, `subscription`, `local`), set in
+      the agent settings and guessed from the adapter's login state when it can be.
+- [ ] `P3-BUDGET-3` Price table `prices.json`: per model input and output price, shipped
+      with current values, editable, used only when the CLI reports no cost. Estimated
+      figures carry an "est." mark everywhere they are shown.
+- [ ] `P3-BUDGET-4` Limit model: scope (all, project, agent, goal or session, guest), period
+      (goal, day, week, month), unit (money, tokens, agent-minutes), thresholds, action.
+      Stored in `config.json`; any number of limits.
+- [ ] `P3-BUDGET-5` Evaluation on every usage event and before every spawn: all applicable
+      limits checked, the first reached wins, results cached so it costs nothing per tick.
+- [ ] `P3-BUDGET-6` Thresholds: notice at 50%, warning at 80%, reached at 100%, each
+      adjustable per limit. Each fires once per period per limit (no repeated warnings).
+- [ ] `P3-BUDGET-7` Enforcement during a run: on reached, pause affected sessions at their
+      next step through the session interface; `stop` ends them. Verify the overshoot is at
+      most one step.
+- [ ] `P3-BUDGET-8` The `ask` flow: reuses the question flow. Choices: raise the limit (by
+      a chosen amount), let this run finish, stop. Owner-only.
+- [ ] `P3-BUDGET-9` Subscription signals: when a CLI reports its plan's rate-limit state or
+      a "limit reached, resets at" message, surface it as a warning or reached event with
+      the reset time (**verify** what each CLI exposes). Agents wait for the reset instead
+      of retrying.
+- [ ] `P3-BUDGET-10` Period reset at local midnight, week start and month start; paused
+      agents resume if their limit's action was `pause`.
+- [ ] `P3-BUDGET-11` First-use prompt: choose a daily limit from a few suggestions or enter
+      one, or choose "no limit" explicitly. Until answered, `api` agents do not start.
+- [ ] `P3-BUDGET-12` Pre-flight line when a goal or play session starts: what remains in
+      each applicable limit.
+- [ ] `P3-BUDGET-13` Commands: `/vibe budget` (show all limits and usage),
+      `/vibe budget set <scope> <amount> <period>`, `/vibe budget remove <scope>`,
+      `/vibe usage [agent|project|today|month]`.
+- [ ] `P3-BUDGET-14` Display: a meter on the wall header for the tightest limit, a meter
+      per agent on the roster, colour change at each threshold, "est." where estimated,
+      and the blocked reason on cards and above the NPC.
+- [ ] `P3-BUDGET-15` `BudgetScreen`: list of limits with add, edit and remove; usage by
+      agent, project and day; the price table.
+- [ ] `P3-BUDGET-16` Tests with `FakeAdapter` usage: warning fires once at 80%; reached
+      pauses mid-run with at most one step of overshoot; per-agent limit blocks only that
+      agent; reset resumes; ledger totals survive a daemon restart; estimates are marked.
+
+## ORCH: speed
+
+- [ ] `P3-ORCH-22` Repository brief: the first agent to explore a repo writes a short
+      summary (layout, build and test commands, conventions). It is cached per project and
+      commit, refreshed when the base moves, and handed to every later agent so workers do
+      not each re-explore.
+- [ ] `P3-ORCH-23` Role models: triage and planning may use a different, cheaper or faster
+      model than coding. Default: same model for everything until measurements say
+      otherwise; the setting exists from the start.
+- [ ] `P3-ORCH-27` Start workers while the player reads the plan when approval is skipped;
+      create worktrees in parallel; never run setup for a task that is not about to start.
+
+## ORCH: compliance
+
+Rules are enforced by the daemon and by each CLI's permission system. The prompt explains
+the rules; it is never the only thing holding them.
+
+- [ ] `P3-ORCH-21` Guardrail presets, per project: `strict` (every command and every write
+      outside the task's listed files asks first), `balanced` (default: edits inside the
+      worktree and a per-project list of safe commands run freely, anything else asks),
+      `autonomous` (asks only for what is always denied). Always denied in every preset:
+      remote git, writes outside the worktree, changing git config or hooks.
+- [ ] `P3-ORCH-24` Check command: an optional per-project command (tests, lint, build) the
+      daemon runs in the worktree when a worker says it is done. Failure sends the output
+      back to the worker, a bounded number of times, then the task goes to Review marked
+      "checks failing". Emits `task.check`.
+- [ ] `P3-ORCH-25` Gate before Review, run by the daemon, not the agent: commits exist only
+      on the task's branch; the user's checkout, HEAD, other branches, remotes, git config
+      and hooks are unchanged since the task started; files touched are compared with the
+      files the brief named and extras are flagged as out of scope. Emits `task.gate`. A
+      repo-integrity failure fails the task; out-of-scope files only flag the card.
+- [ ] `P3-ORCH-26` House rules: a per-project text (and the repo's own agent instruction
+      files, which the CLIs already read) given to every agent, lead and worker alike.
+- [ ] `P3-ORCH-28` Permission requests from a CLI become `agent.permission` events and
+      follow the question flow: the NPC walks over, the player picks allow once, always
+      allow for this project, or deny.
+- [ ] `P3-ORCH-29` Tests: each preset allows and refuses the right scripted actions; the
+      gate catches a commit on the wrong branch, an edited hook and an added remote.
+
 ## MCP: ask_user
 
-- [ ] `P3-MCP-1` **verify** how each supported CLI registers a stdio MCP server per run
-      (config file or flag) and how tool results are returned.
+- [ ] `P3-MCP-1` **verify** how each supported CLI registers an MCP server per run and which
+      transports it accepts. Prefer one HTTP endpoint inside the daemon (no extra process
+      per agent, faster start); fall back to a stdio server launched from the mod jar if a
+      CLI only supports that.
 - [ ] `P3-MCP-2` `AskUserServer`: a `main` that speaks MCP over stdio (`initialize`,
       `tools/list`, `tools/call`) with one tool, `ask_user(question, options?)`. Launched
       by the CLI from the mod jar.
@@ -109,6 +197,10 @@ review flow are shared; a mode only decides who creates tasks and who talks to w
 - [ ] `P3-GIT-1` `diffStat(repo, taskId)`: files changed, lines added and removed against
       the branch point.
 - [ ] `P3-GIT-2` Create a worktree from another task's branch (for dependent tasks).
+- [ ] `P3-GIT-3` Worktree setup: a per-project setup command (install dependencies,
+      generate code) and an optional list of untracked paths to link or copy in. Without
+      this, agents in fresh worktrees cannot build or test most real projects. Copying
+      secret files such as `.env` is off unless the owner lists them.
 
 ## DISPLAY: the wall
 
@@ -151,6 +243,9 @@ review flow are shared; a mode only decides who creates tasks and who talks to w
       `/vibe agents`, `/vibe budget [amount]`.
 - [ ] `P3-CMD-2` `/vibe mode [auto|solo|lead|peer]` shows or sets the project's team mode;
       `/vibe goal --mode <mode> <text>` overrides it once.
+- [ ] `P3-CMD-3` `/vibe stop all` and a stop lever in the studio: every agent process ends
+      within 2 seconds, tasks become `planned` with reason `stopped`, worktrees are kept.
+      `/vibe pause` and `/vibe resume` do the same without discarding session state.
 - [ ] `P3-SCREEN-5` Team mode section in the board screen: mode picker with a one-line
       description of each, parallel-agent limit, plan approval and `leadAlsoCodes` toggles.
       The wall header shows the mode a goal is running in.

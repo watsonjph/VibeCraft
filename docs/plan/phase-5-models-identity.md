@@ -54,9 +54,8 @@ and can start early; the UI half needs phase 3.
 
 - [ ] `P5-NPC-1` Apply preset name and skin to the entity; changes apply without respawning
       the studio.
-- [ ] `P5-NPC-2` Skin sources: Mojang username (default). Local PNG skins need a
-      client-side dynamic texture and a custom renderer, so only do this if the phase 2
-      spike already forced a custom entity.
+- [ ] `P5-NPC-2` Skin sources: Mojang username (default) or a local PNG, sent to clients
+      and applied as a dynamic texture by the agent renderer. Validate size and format.
 - [ ] `P5-STUDIO-1` Desk assignment: which preset sits at which desk, stored in world data;
       add and remove desks from the settings screen.
 

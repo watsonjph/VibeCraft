@@ -60,6 +60,9 @@ central promise, so its git paths are the most heavily tested code in the repo.
       (opens a note field), Discard (confirm). Results and git error messages shown in
       place.
 - [ ] `P4-SCREEN-3` Keyboard: next and previous file, next and previous hunk.
+- [ ] `P4-SCREEN-4` Review shows what the daemon checked: check command result, gate
+      result, out-of-scope files, and the list of commands the agent ran. Merging a task
+      with failing checks or gate flags needs an extra confirmation.
 
 ## DISPLAY, NPC
 
